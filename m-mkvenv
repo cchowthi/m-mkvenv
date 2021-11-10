@@ -1,0 +1,86 @@
+#!/bin/bash
+######### start of header ######################################
+# Program Name:  m-mkvenv (BASH script)
+# Author:        Larry Sleeper (lsleeper)
+# Description:   Standardize how Python3 virtual environments are created at Gilead
+#             	 Use git to get requirements.txt from Gilead github repo
+#
+# Category:      Utility
+# Macros called: 
+# Parameter:                
+# Usage:         m-mkvenv -v my_new_python_venv
+#                                                                       
+# Change History: 
+#      2021-02-11  lsleeper - Original programming   
+# 		 2021-06-15  lsleeper - delete repo dirs if they exist
+#                             install PUTS module from repo
+#	 														do not specify version when upgrading pip
+########## end of header ###########################################/
+
+if [ $# -eq 0 ]; then
+    echo "No arguments provided"
+    exit 1
+fi
+
+while getopts :v:r:p: c; do
+	case $c in
+		v) _venvname=$OPTARG ;;
+		r) _reqtxt=$OPTARG ;;		
+		h) usage
+		   exit 1 ;;
+	esac
+done
+
+echo $_venvname
+
+if [ "$_venvname" == "" ]; then
+	echo "Need virtual environment name specified with -v argument.  No env created"
+	exit 1
+fi
+
+if [ -d "$_venvname" ]; then
+	echo "Virtual environment $_venvname directory already exists.  Delete it and run m-mkenv again"
+	exit 1 
+fi
+
+echo "Creating and activating Python 3.6 Virtual Environment $_venvname"
+
+python3.6 -m venv "$_venvname"
+source "$_venvname/bin/activate"
+
+pip install --upgrade pip
+
+if ["$_reqtxt" == ""]; then
+
+	echo "Installing from Gilead standard requirements.txt file"
+	if [ -d "gpythonvenv" ]; then
+		rm -r gpythonvenv
+	fi
+  git clone git@github.com:Gilead-Biometrics-DataEngineering/gpythonvenv.git
+	pip install -r gpythonvenv/gpythonvenv_requirements.txt 
+	
+	# install puts module
+	echo "Installing PUTS module"
+	if [ -d "PUTS" ]; then
+			rm -r PUTS
+	fi
+	git clone git@github.com:Gilead-Biometrics-DataEngineering/PUTS.git
+	pip install PUTS/dist/puts-0.0.1.tar.gz
+	
+	# install m_passw module
+	echo "Installing m_passw module"
+	if [ -d "m_passw" ]; then
+			rm -r m_passw
+	fi
+	git clone git@github.com:Gilead-Biometrics-DataEngineering/m_passw.git
+	pip install m_passw/dist/m_passw-0.0.1.tar.gz	
+		
+else 
+
+	echo "Installing from user specified requirements.txt file $_reqtxt"
+	pip install -r "$_reqtxt"
+	
+fi
+
+deactivate
+
